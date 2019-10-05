@@ -1,0 +1,6 @@
+comtypes==1.1.7
+loguru==0.3.2
+python-dateutil==2.8.0
+pywin32==225
+win32-setctime==1.0.1
+wxPython==4.0.6
