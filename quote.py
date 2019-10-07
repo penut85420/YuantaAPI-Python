@@ -62,10 +62,10 @@ class YuantaQuoteAXCtrl:
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
-    def save_dir(self, code):
+    def savedir(self, code):
         if datetime.datetime.now() > self.next_day:
             self.update_savedir()
-        return os.path.join('{self.save_dir}', f'{code}.csv')
+        return os.path.join(self.save_dir, f'{code}.csv')
 
     def Config(self, host, port, username, password):
         self.Host = host
@@ -104,7 +104,7 @@ class YuantaQuoteAXCtrl:
         fdbPri, fdbQty, fdsPri, fdsQty, reqType
         ):
         matchTime = f'{matchTime[:2]}:{matchTime[2:4]}:{matchTime[4:6]}.{matchTime[6:]}'
-        with open(self.save_dir(symbol), 'a', encoding='UTF-8') as fout:
+        with open(self.savedir(symbol), 'a', encoding='UTF-8') as fout:
             record = [
                 f'{self.time()},{openPri},{highPri},{lowPri}',
                 f',{matchTime},{matchPri},{matchQty},{tolMatchQty}',
@@ -141,7 +141,7 @@ def ConnectionConfiguration(args):
 
     config = load_json('./config.json')
     config['port'] = args.port
-    if args.is_night and args.port != 442 or args.port != 82:
+    if args.is_night and (args.port != 442 or args.port != 82):
         config['port'] = 442
         logger.warning('')
     config['host'] = 'apiquote.yuantafutures.com.tw'
