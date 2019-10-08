@@ -14,11 +14,11 @@ import wx
 from loguru import logger
 
 link_status = {
-    -2: 'Connection Failed',
-    -1: 'Connection Broken',
-    0: 'Connection Idle',
-    1: 'Connection Ready',
-    2: 'Connection Success'
+    -2: 'Connection failed.',
+    -1: 'Connection broken.',
+    0: 'Connection idled.',
+    1: 'Connection ready.',
+    2: 'Connection success.'
 }
 
 link_status_logtype = {
@@ -30,8 +30,9 @@ link_status_logtype = {
 }
 
 class YuantaQuoteAXCtrl:
-    def __init__(self, parent):
+    def __init__(self, parent, args):
         self.parent = parent
+        self.args = args
 
         container = ctypes.POINTER(comtypes.IUnknown)()
         control = ctypes.POINTER(comtypes.IUnknown)()
@@ -54,7 +55,10 @@ class YuantaQuoteAXCtrl:
 
     def update_savedir(self):
         self.date = datetime.datetime.now().strftime('%Y%m%d')
-        self.save_dir = f'./data/{self.date}/'
+        if self.args.is_night:
+            self.save_dir = f'./data_night/{self.date}/'
+        else:
+            self.save_dir = f'./data/{self.date}/'
         n = datetime.datetime.now()
         day = n.day if n.hour < 5 else n.day + 1
         self.next_day = datetime.datetime(n.year, n.month, day, 5, 30)
@@ -114,6 +118,11 @@ class YuantaQuoteAXCtrl:
 
     def OnMktStatusChange(self, status, msg, reqType):
         link_status_logtype[status](f'{link_status[status]}')
+
+        if status < 0:
+            logger.info('Try to login again.')
+            self.Logon()
+
         if status != 2:
             return
 
@@ -128,6 +137,11 @@ class YuantaQuoteAXCtrl:
             result = self.ctrl.AddMktReg(code, 2, reqType, 0)
             logger.trace(f'Registered {code}, result: {result}')
         logger.success('Future registration done.')
+
+        for code in code_list['option']:
+            result = self.ctrl.AddMktReg(code, 2, reqType, 0)
+            logger.trace(f'Registered {code}, result: {result}')
+        logger.success('Option registration done.')
 
 def load_json(fpath):
     with open(fpath, 'r', encoding='UTF-8') as f:
@@ -144,8 +158,8 @@ def ConnectionConfiguration(args):
     if args.is_night and (args.port != 442 or args.port != 82):
         config['port'] = 442
         logger.warning('')
-    config['host'] = 'apiquote.yuantafutures.com.tw'
-    logger.info(f'Connection Target {config["host"]}:{config["port"]}')
+    config['host'] = '203.66.93.84'
+    logger.info(f'Connecting to {config["host"]}:{config["port"]}')
     return config
 
 def LoggerConfiguration(args):
@@ -176,18 +190,25 @@ def main():
     parser.add_argument('-v', '--verbose', dest='verbose', type=str, default='TRACE', help='set logging level')
     args = parser.parse_args()
 
-    app = wx.App()
-    frame = wx.Frame(parent=None, id=wx.ID_ANY, title='Yuanta.Quote') # pylint: disable=no-member
-    frame.Hide()
+    while True:
+        try:
+            app = wx.App()
+            frame = wx.Frame(parent=None, id=wx.ID_ANY, title='Yuanta.Quote') # pylint: disable=no-member
+            frame.Hide()
 
-    LoggerConfiguration(args)
-    config = ConnectionConfiguration(args)
+            LoggerConfiguration(args)
+            config = ConnectionConfiguration(args)
 
-    quote = YuantaQuoteAXCtrl(frame)
-    quote.Config(**config)
-    quote.Logon()
+            quote = YuantaQuoteAXCtrl(frame, args)
+            quote.Config(**config)
+            quote.Logon()
 
-    app.MainLoop()
+            app.MainLoop()
+        except KeyboardInterrupt:
+            print('Bye!')
+            exit(0)
+        except Exception as e:
+            logger.critical(str(e))
 
 if __name__ == '__main__':
     main()
