@@ -77,23 +77,23 @@ class YuantaQuoteAXCtrl:
 
     def check_time(self):
         # logger.info(f'Day: {self.is_day()} - Port: {self.is_day_port()}')
-        if self.terminate:
-            return
+        while True:
+            if self.terminate:
+                return
 
-        if self.is_day() and not self.is_day_port():
-            self.Port = 443
-            logger.info('Change connection port to 443.')
-            self.update_savedir()
-            RenewOptionCodeList()
-            self.Logon()
-        elif not self.is_day() and self.is_day_port():
-            self.Port = 442
-            logger.info('Change connection port to 442.')
-            self.update_savedir()
-            self.Logon()
+            if self.is_day() and not self.is_day_port():
+                self.Port = 443
+                logger.info('Change connection port to 443.')
+                self.update_savedir()
+                RenewOptionCodeList()
+                self.Logon()
+            elif not self.is_day() and self.is_day_port():
+                self.Port = 442
+                logger.info('Change connection port to 442.')
+                self.update_savedir()
+                self.Logon()
 
-        time.sleep(1)
-        self.check_time()
+            time.sleep(1)
 
     def is_day_port(self):
         if self.Port == 443:
