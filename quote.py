@@ -3,15 +3,18 @@ import ctypes
 import datetime
 import json
 import os
-os.environ['LOGURU_AUTOINIT'] = 'False'
 import sys
-
-import dateutil.relativedelta
+import threading
+import time
 
 import comtypes
 import comtypes.client
+import dateutil.relativedelta
 import wx
+
+os.environ['LOGURU_AUTOINIT'] = 'False'
 from loguru import logger
+from utils import GetOptionCode
 
 link_status = {
     -2: 'Connection failed.',
@@ -33,6 +36,7 @@ class YuantaQuoteAXCtrl:
     def __init__(self, parent, args):
         self.parent = parent
         self.args = args
+        self.terminate = False
 
         container = ctypes.POINTER(comtypes.IUnknown)()
         control = ctypes.POINTER(comtypes.IUnknown)()
@@ -55,10 +59,10 @@ class YuantaQuoteAXCtrl:
 
     def update_savedir(self):
         self.date = datetime.datetime.now().strftime('%Y%m%d')
-        if self.args.is_night:
-            self.save_dir = f'./data_night/{self.date}/'
-        else:
+        if self.is_day():
             self.save_dir = f'./data/{self.date}/'
+        else:
+            self.save_dir = f'./data_night/{self.date}/'
         n = datetime.datetime.now()
         day = n.day if n.hour < 5 else n.day + 1
         self.next_day = datetime.datetime(n.year, n.month, day, 5, 30)
@@ -70,6 +74,48 @@ class YuantaQuoteAXCtrl:
         if datetime.datetime.now() > self.next_day:
             self.update_savedir()
         return os.path.join(self.save_dir, f'{code}.csv')
+
+    def check_time(self):
+        # logger.info(f'Day: {self.is_day()} - Port: {self.is_day_port()}')
+        if self.terminate:
+            return
+
+        if self.is_day() and not self.is_day_port():
+            self.Port = 443
+            logger.info('Change connection port to 443.')
+            self.update_savedir()
+            RenewOptionCodeList()
+            self.Logon()
+        elif not self.is_day() and self.is_day_port():
+            self.Port = 442
+            logger.info('Change connection port to 442.')
+            self.update_savedir()
+            self.Logon()
+
+        time.sleep(1)
+        self.check_time()
+
+    def is_day_port(self):
+        if self.Port == 443:
+            return True
+        if self.Port == 80:
+            return True
+        return False
+
+    def is_day(self):
+        """
+        05:45~14:45: Day
+        14:45~05:45: Night
+        """
+        now = datetime.datetime.now()
+        day_begin = now.replace(hour=7, minute=0, second=0)
+        day_end = now.replace(hour=14, minute=50, second=0)
+
+        if now < day_begin:
+            return False
+        if now > day_end:
+            return False
+        return True
 
     def Config(self, host, port, username, password):
         self.Host = host
@@ -99,6 +145,7 @@ class YuantaQuoteAXCtrl:
         return f'{code}{self.XXF()}'
 
     def Logon(self):
+        logger.info(f'Connecting to {self.Host}:{self.Port}')
         self.ctrl.SetMktLogon(self.Username, self.Password, self.Host, self.Port, 1, 0)
 
     def OnGetMktAll(
@@ -147,19 +194,14 @@ def load_json(fpath):
     with open(fpath, 'r', encoding='UTF-8') as f:
         return json.load(f)
 
+def save_json(fpath, obj):
+    with open(fpath, 'w', encoding='UTF-8') as f:
+        json.dump(obj, f)
+
 def ConnectionConfiguration(args):
-    port_set = set([80, 82, 443, 442])
-
-    if args.port not in port_set:
-        logger.error('Port is not set to support ports, might cause connection failed.')
-
     config = load_json('./config.json')
-    config['port'] = args.port
-    if args.is_night and (args.port != 442 or args.port != 82):
-        config['port'] = 442
-        logger.warning('')
+    config['port'] = 442 if args.is_night else 443
     config['host'] = '203.66.93.84'
-    logger.info(f'Connecting to {config["host"]}:{config["port"]}')
     return config
 
 def LoggerConfiguration(args):
@@ -177,15 +219,20 @@ def LoggerConfiguration(args):
     logger.add(
         f'{datetime.date.today():%Y%m%d}.log',
         rotation='1 day',
-        retention='7 days',
+        retention='180 days',
         level=args.verbose,
         encoding='UTF-8',
         format=log_format
     )
 
+def RenewOptionCodeList():
+    option_code_list = GetOptionCode()
+    code_list = load_json('./code.json')
+    code_list['option'] = option_code_list
+    save_json('./code.json', code_list)
+
 def main():
     parser = argparse.ArgumentParser(description='Taiwan Stock, Future & Option Quote')
-    parser.add_argument('-p', dest='port', type=int, default=443, help='set connection port')
     parser.add_argument('-n', '--night', dest='is_night', action='store_true', help='connect to night tape')
     parser.add_argument('-v', '--verbose', dest='verbose', type=str, default='TRACE', help='set logging level')
     args = parser.parse_args()
@@ -197,18 +244,21 @@ def main():
             frame.Hide()
 
             LoggerConfiguration(args)
-            config = ConnectionConfiguration(args)
+            RenewOptionCodeList()
 
+            config = ConnectionConfiguration(args)
             quote = YuantaQuoteAXCtrl(frame, args)
             quote.Config(**config)
             quote.Logon()
 
+            threading.Thread(target=quote.check_time).start()
             app.MainLoop()
         except KeyboardInterrupt:
             print('Bye!')
             exit(0)
         except Exception as e:
             logger.critical(str(e))
+    quote.terminate = True
 
 if __name__ == '__main__':
     main()

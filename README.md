@@ -6,7 +6,9 @@
 
 ## Features
 + 啟動程式後，會將行情資料記錄成 csv 檔。
-+ 支援股票和期貨商品。
++ 支援股票、期貨和選擇權商品。
++ 自動切換日夜盤。
++ 自動更新選擇權商品代碼。
 
 ## Environment
 + OS: Windows 10 x64 1903
@@ -24,6 +26,11 @@
   + `-p, --port` - 設定連接 API 的 Port。
   + `-n, --night` - 設定是否為夜盤。
   + `-v, --verbose` - 設定 Log 檔的 Logging Level，請參考 [Severity Levels](https://tinyurl.com/y4p2a25l)。
++ Example
+  + 普通獲取日盤行情
+    + `$ python quote.py`
+  + 獲取夜盤行情
+    + `$ python quote.py -n`
 
 ## Port
 + 使用 80 或 443 為日盤的行情。
