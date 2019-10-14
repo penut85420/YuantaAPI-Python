@@ -1,20 +1,20 @@
-import argparse
-import ctypes
-import datetime
-import json
+import wx
 import os
 import sys
-import threading
+import json
 import time
-
+import ctypes
 import comtypes
+import argparse
+import datetime
+import threading
+
 import comtypes.client
 import dateutil.relativedelta
-import wx
-
 os.environ['LOGURU_AUTOINIT'] = 'False'
+
 from loguru import logger
-from utils import GetOptionCode
+from utils import GetOptionCode, clear_log
 
 link_status = {
     -2: 'Connection failed.',
@@ -68,6 +68,7 @@ class YuantaQuoteAXCtrl:
         self.next_day = datetime.datetime(n.year, n.month, day, 5, 30)
 
         if not os.path.exists(self.save_dir):
+            logger.info(f'Switch folder to {self.save_dir}')
             os.makedirs(self.save_dir)
 
     def savedir(self, code):
@@ -75,8 +76,7 @@ class YuantaQuoteAXCtrl:
             self.update_savedir()
         return os.path.join(self.save_dir, f'{code}.csv')
 
-    def check_time(self):
-        # logger.info(f'Day: {self.is_day()} - Port: {self.is_day_port()}')
+    def UpdateDayNight(self):
         while True:
             if self.terminate:
                 return
@@ -94,6 +94,14 @@ class YuantaQuoteAXCtrl:
                 self.Logon()
 
             time.sleep(1)
+
+    def ClearLog(self):
+        while True:
+            if self.terminate:
+                return
+
+            clear_log('./Logs')
+            time.sleep(300)
 
     def is_day_port(self):
         if self.Port == 443:
@@ -251,7 +259,8 @@ def main():
             quote.Config(**config)
             quote.Logon()
 
-            threading.Thread(target=quote.check_time).start()
+            threading.Thread(target=quote.UpdateDayNight).start()
+            threading.Thread(target=quote.ClearLog).start()
             app.MainLoop()
         except KeyboardInterrupt:
             print('Bye!')
