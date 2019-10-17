@@ -28,7 +28,9 @@ def GetOptionCode():
         p = re.compile(r'%s(\d+)' % tag)
         r = requests.get(url)
         prices = p.findall(r.text)
-        logger.info(f'{d:<8s} price range from {int(prices[0]):5} to {int(prices[-1]):5}.')
+        a = int(prices[0])
+        b = int(prices[-1])
+        logger.info(f'{d:<8s} price range ({a:5}, {b:5}), middle: {(a+b)//2}.')
         for p in prices:
             code_list.append(f'TX{w[1]}{int(p):05d}{buy[m]}{y}')
             code_list.append(f'TX{w[1]}{int(p):05d}{sell[m]}{y}')
