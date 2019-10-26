@@ -2,6 +2,7 @@ import os
 import re
 import requests
 from loguru import logger
+from datetime import timedelta
 from datetime import datetime as dt
 
 def GetOptionCode():
@@ -51,8 +52,9 @@ def remove_dir(dir_path):
 def clear_log(path):
     for dir_path, dir_list, file_list in os.walk(path):
         date = dt.now().strftime('%Y%m%d')
+        date2 = (dt.now() - timedelta(days=1)).strftime('%Y%m%d')
         for dir_name in dir_list:
-            if dir_name != date:
+            if dir_name != date and dir_name != date2:
                 remove_dir(os.path.join(dir_path, dir_name))
 
         for file_name in file_list:

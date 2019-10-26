@@ -60,7 +60,7 @@ class YuantaQuoteAXCtrl:
     def update_savedir(self):
         self.date = datetime.datetime.now().strftime('%Y%m%d')
         if self.is_day():
-            self.save_dir = f'./data/{self.date}/'
+            self.save_dir = f'./data_day/{self.date}/'
         else:
             self.save_dir = f'./data_night/{self.date}/'
         n = datetime.datetime.now()
@@ -112,8 +112,8 @@ class YuantaQuoteAXCtrl:
 
     def is_day(self):
         """
-        05:45~14:45: Day
-        14:45~05:45: Night
+        07:00~14:45 - Day
+        14:45~07:00 - Night
         """
         now = datetime.datetime.now()
         day_begin = now.replace(hour=7, minute=0, second=0)
@@ -225,7 +225,7 @@ def LoggerConfiguration(args):
         args.verbose = 'TRACE'
 
     logger.add(
-        f'{datetime.date.today():%Y%m%d}.log',
+        f'./logs_quote/{datetime.date.today():%Y%m%d}.log',
         rotation='1 day',
         retention='180 days',
         level=args.verbose,
