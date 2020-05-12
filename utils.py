@@ -9,7 +9,7 @@ def GetOptionCode():
     logger.info('Retrieving option code list.')
     # Find all date
     url = 'https://tw.screener.finance.yahoo.net/future/aa03?opmr=optionfull&opcm=WTXO'
-    with requests.get(url) as r:
+    with requests.get(url, stream=True) as r:
         tag = re.escape('</option>')
         p = re.compile(r'([\dW]+)%s' % tag)
         date = p.findall(r.text)
@@ -27,8 +27,7 @@ def GetOptionCode():
         url = f'https://tw.screener.finance.yahoo.net/future/aa03?opmr=optionfull&opcm=WTXO&opym={d}'
         tag = re.escape('<td class="ext-big-tb-center">')
         p = re.compile(r'%s(\d+)' % tag)
-        with requests.get(url) as r: 
-            r = requests.get(url)
+        with requests.get(url) as r:
             prices = p.findall(r.text)
         a = int(prices[0])
         b = int(prices[-1])
@@ -64,4 +63,4 @@ def clear_log(path):
 
 if __name__ == '__main__':
     GetOptionCode()
-    # clear_log('./Logs')
+    clear_log('./Logs')
