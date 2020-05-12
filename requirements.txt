@@ -1,6 +1,15 @@
+certifi==2019.9.11
+chardet==3.0.4
+colorama==0.4.1
 comtypes==1.1.7
+idna==2.8
 loguru==0.3.2
+numpy==1.17.2
+Pillow==6.2.0
 python-dateutil==2.8.0
 pywin32==225
+requests==2.22.0
+six==1.12.0
+urllib3==1.25.6
 win32-setctime==1.0.1
 wxPython==4.0.6
