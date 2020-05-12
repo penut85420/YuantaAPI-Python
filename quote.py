@@ -6,6 +6,7 @@ import time
 import ctypes
 import comtypes
 import argparse
+import calendar
 import datetime
 import threading
 
@@ -64,8 +65,9 @@ class YuantaQuoteAXCtrl:
         else:
             self.save_dir = f'./data_night/{self.date}/'
         n = datetime.datetime.now()
-        day = n.day if n.hour < 5 else n.day + 1
-        self.next_day = datetime.datetime(n.year, n.month, day, 5, 30)
+        if n.hour >= 5:
+            n += datetime.timedelta(days=1)
+        self.next_day = datetime.datetime(n.year, n.month, n.day, 5, 30)
 
         if not os.path.exists(self.save_dir):
             logger.info(f'Switch folder to {self.save_dir}')
