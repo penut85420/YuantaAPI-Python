@@ -20,9 +20,9 @@ def main(tag, inn_dir, output):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Retrieve all file with tag into .7z')
-    parser.add_argument('-i', '--input', help='target directory to search')
-    parser.add_argument('-t', '--tag', help='tag need to be contained in file name')
-    parser.add_argument('-o', '--output', help='name of output .7z file')
+    parser.add_argument('-i', '--input', required=True, help='target directory to search')
+    parser.add_argument('-t', '--tag', required=True, help='tag need to be contained in file name')
+    parser.add_argument('-o', '--output', required=True, help='name of output .7z file')
     args = parser.parse_args()
 
     main(args.tag, args.input, args.output)
