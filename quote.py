@@ -88,7 +88,7 @@ class YuantaQuoteAXCtrl:
                 self.Port = 443
                 logger.info('Change connection port to 443.')
                 self.update_savedir()
-                if not args.no_option:
+                if not self.args.no_option:
                     RenewOptionCodeList()
                 self.Logon()
             elif not self.is_day() and self.is_day_port():
@@ -223,7 +223,7 @@ class YuantaQuoteAXCtrl:
             logger.trace(f'Registered {code}, result: {result}')
         logger.success('Future registration done.')
 
-        if not args.no_option:
+        if not self.args.no_option:
             for code in code_list['option']:
                 result = self.ctrl.AddMktReg(code, 2, reqType, 0)
                 logger.trace(f'Registered {code}, result: {result}')
@@ -291,16 +291,16 @@ def main():
         action='store_true', default=False, help='not to collect option quote data'
     )
     args = parser.parse_args()
-    print(args)
 
     while True:
         try:
             app = wx.App()
+            # pylint: disable=no-member
             frame = wx.Frame(
                 parent=None,
                 id=wx.ID_ANY,
                 title='Yuanta.Quote'
-            ) # pylint: disable=no-member
+            )
             frame.Hide()
 
             LoggerConfiguration(args)
