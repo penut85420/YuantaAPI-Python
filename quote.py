@@ -18,8 +18,8 @@ from loguru import logger
 from utils import GetOptionCode, clear_log
 
 link_status = {
-    -2: 'Connection failed.',
-    -1: 'Connection broken.',
+   -2: 'Connection failed.',
+   -1: 'Connection broken.',
     0: 'Connection idled.',
     1: 'Connection ready.',
     2: 'Connection success.'
@@ -76,6 +76,7 @@ class YuantaQuoteAXCtrl:
     def savedir(self, code):
         if datetime.datetime.now() > self.next_day:
             self.update_savedir()
+
         return os.path.join(self.save_dir, f'{code}.csv')
 
     def UpdateDayNight(self):
@@ -87,7 +88,8 @@ class YuantaQuoteAXCtrl:
                 self.Port = 443
                 logger.info('Change connection port to 443.')
                 self.update_savedir()
-                RenewOptionCodeList()
+                if not args.no_option:
+                    RenewOptionCodeList()
                 self.Logon()
             elif not self.is_day() and self.is_day_port():
                 self.Port = 442
@@ -127,6 +129,26 @@ class YuantaQuoteAXCtrl:
             return False
         return True
 
+    def is_trade_time(self):
+        """
+        # Trade Time
+        + Day: 08:45~13:45
+        + Night: 15:00~05:00
+        """
+        now = datetime.datetime.now()
+        day_begin = now.replace(hour=8, minute=45, second=0)
+        day_end = now.replace(hour=13, minute=45, second=0)
+        night_begin = now.replace(hour=15, minute=00, second=0)
+        night_end = now.replace(hour=5, minute=0, second=0)
+
+        if now >= day_begin and now <= day_end:
+            return True
+        if now <= night_end:
+            return True
+        if now >= night_begin:
+            return True
+        return False
+
     def Config(self, host, port, username, password):
         self.Host = host
         self.Port = port
@@ -163,7 +185,7 @@ class YuantaQuoteAXCtrl:
         matchTime, matchPri, matchQty, tolMatchQty,
         bestBuyQty, bestBuyPri, bestSellQty, bestSellPri,
         fdbPri, fdbQty, fdsPri, fdsQty, reqType
-        ):
+    ):
         matchTime = f'{matchTime[:2]}:{matchTime[2:4]}:{matchTime[4:6]}.{matchTime[6:]}'
         with open(self.savedir(symbol), 'a', encoding='UTF-8') as fout:
             record = [
@@ -178,6 +200,12 @@ class YuantaQuoteAXCtrl:
 
         if status < 0:
             logger.info('Try to login again.')
+            if self.is_trade_time():
+                logger.info('Reconnection in trade time will be wait for 1 second')
+                time.sleep(1)
+            else:
+                logger.info('Reconnection beyond trade time will wait for 1 minutes')
+                time.sleep(60)
             self.Logon()
 
         if status != 2:
@@ -195,10 +223,11 @@ class YuantaQuoteAXCtrl:
             logger.trace(f'Registered {code}, result: {result}')
         logger.success('Future registration done.')
 
-        for code in code_list['option']:
-            result = self.ctrl.AddMktReg(code, 2, reqType, 0)
-            logger.trace(f'Registered {code}, result: {result}')
-        logger.success('Option registration done.')
+        if not args.no_option:
+            for code in code_list['option']:
+                result = self.ctrl.AddMktReg(code, 2, reqType, 0)
+                logger.trace(f'Registered {code}, result: {result}')
+            logger.success('Option registration done.')
 
 def load_json(fpath):
     with open(fpath, 'r', encoding='UTF-8') as f:
@@ -212,23 +241,30 @@ def ConnectionConfiguration(args):
     config = load_json('./config.json')
     config['port'] = 442 if args.is_night else 443
     config['host'] = '203.66.93.84'
+
     return config
 
 def LoggerConfiguration(args):
-    log_format = '{time:HH:mm:ss.SSSSSS} | <lvl>{level: ^9}</lvl> | {function}:{line} - {message}'
+    log_format = (
+        '{time:YYYY-MM-DD HH:mm:ss.SSSSSS} | '
+        '<lvl>{level: ^9}</lvl> | '
+        '{function}:{line} - {message}'
+    )
     verbose_set = set(['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'CRITICAL'])
 
     logger.add(sys.stderr, level='INFO', format=log_format)
 
     args.verbose = args.verbose.upper()
     if args.verbose not in verbose_set:
-        logger.warning(f'Verbose level "{args.verbose}" is not one of TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR or CRITICAL')
-        logger.warning(f'Verbose level will be set to TRACE')
-        args.verbose = 'TRACE'
+        logger.warning(
+            f'Verbose level "{args.verbose}" is not one of '
+            'TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR or CRITICAL')
+        logger.warning(f'Verbose level will be set to DEBUG')
+        args.verbose = 'DEBUG'
 
     logger.add(
-        f'./logs_quote/{datetime.date.today():%Y%m%d}.log',
-        rotation='1 day',
+        f'./logs_quote/quote.log',
+        rotation='7 day',
         retention='180 days',
         level=args.verbose,
         encoding='UTF-8',
@@ -242,19 +278,34 @@ def RenewOptionCodeList():
     save_json('./code.json', code_list)
 
 def main():
-    parser = argparse.ArgumentParser(description='Taiwan Stock, Future & Option Quote')
-    parser.add_argument('-n', '--night', dest='is_night', action='store_true', help='connect to night tape')
-    parser.add_argument('-v', '--verbose', dest='verbose', type=str, default='TRACE', help='set logging level')
+    parser = argparse.ArgumentParser(
+        description='Taiwan Stock, Future & Option Quote')
+    parser.add_argument(
+        '-n', '--night', dest='is_night',
+        action='store_true', help='connect to night tape')
+    parser.add_argument(
+        '-v', '--verbose', dest='verbose',
+        type=str, default='DEBUG', help='set logging level')
+    parser.add_argument(
+        '--no-option', dest='no_option',
+        action='store_true', default=False, help='not to collect option quote data'
+    )
     args = parser.parse_args()
+    print(args)
 
     while True:
         try:
             app = wx.App()
-            frame = wx.Frame(parent=None, id=wx.ID_ANY, title='Yuanta.Quote') # pylint: disable=no-member
+            frame = wx.Frame(
+                parent=None,
+                id=wx.ID_ANY,
+                title='Yuanta.Quote'
+            ) # pylint: disable=no-member
             frame.Hide()
 
             LoggerConfiguration(args)
-            RenewOptionCodeList()
+            if not args.no_option:
+                RenewOptionCodeList()
 
             config = ConnectionConfiguration(args)
             quote = YuantaQuoteAXCtrl(frame, args)
@@ -269,6 +320,7 @@ def main():
             exit(0)
         except Exception as e:
             logger.critical(str(e))
+
     quote.terminate = True
 
 if __name__ == '__main__':

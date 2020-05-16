@@ -29,8 +29,29 @@
 + 使用 80 或 443 為日盤的行情。
 + 使用 82 或 442 為夜盤的行情。
 
-## Security
+## Scripts
++ `do_compress.py`
+  + 壓縮行情資料，建議使用 Bash
++ `log_cls.py`
+  + 清除 `./Logs` 下的紀錄檔
++ `quote.py`
+  + 接收行情資料的主程式
++ `retrieve_file.py`
+  + 從行情資料夾內提取目標商品的資料
++ `std_analysis.py`
+  + 分析行情價格標準差變動的相關資訊
++ `switch_battery_plan.py`
+  + 切換電腦的電源狀態
++ `utils.py`
+  + 系統相關程式庫
++ `ping.sh`
+  + 執行 Ping 元大行情主機的指令
+  + 必須使用 Bash
+
+## Security Issue
 + 元大 API 會在連接伺服器的時候自動產生一個 `Logs\event.log` 的檔案，會將使用者的帳密以明碼的方式寫入，程式執行結束時請務必手動刪除這個檔案。
+  + 本系統會每隔五分鐘清除一次這個資料夾下的檔案
+  + 也可以手動執行 `log_cls.py` 這個程式來清除
 
 ## Reference
 + [Python 程式交易 30 天新手入門](https://tinyurl.com/y3ycw3ms)

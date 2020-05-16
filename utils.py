@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import requests
 from loguru import logger
 from datetime import timedelta
@@ -59,7 +60,14 @@ def clear_log(path):
 
         for file_name in file_list:
             full_path = os.path.join(dir_path, file_name)
-            open(full_path, 'w').close()
+            flag = True
+            while flag:
+                try:
+                    open(full_path, 'w').close()
+                    flag = False
+                except Exception as e:
+                    logger.debug(f'{full_path} remove failed, will retry after 1 second.')
+                    time.sleep(1)
 
 if __name__ == '__main__':
     GetOptionCode()

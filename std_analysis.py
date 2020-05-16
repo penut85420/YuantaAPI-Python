@@ -108,8 +108,4 @@ def parse_timestamp(t):
         return None
 
 if __name__ == '__main__':
-    # ds, yy, mm, dd = mk_ds('./data_night/20200302/TXFC0.csv')
-    # ds = np.array(ds)
-    # print(ds, ds.shape)
-    # input()
     main()
