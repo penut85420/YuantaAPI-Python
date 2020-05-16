@@ -56,15 +56,15 @@ class YuantaQuoteAXCtrl:
         self.update_savedir()
 
     def time(self):
-        return f'{datetime.datetime.now():%H:%M:%S.%f}'
+        return f'{get_time():%H:%M:%S.%f}'
 
     def update_savedir(self):
-        self.date = datetime.datetime.now().strftime('%Y%m%d')
+        self.date = get_time().strftime('%Y%m%d')
         if self.is_day():
             self.save_dir = f'./data_day/{self.date}/'
         else:
             self.save_dir = f'./data_night/{self.date}/'
-        n = datetime.datetime.now()
+        n = get_time()
         if n.hour >= 5:
             n += datetime.timedelta(days=1)
         self.next_day = datetime.datetime(n.year, n.month, n.day, 5, 30)
@@ -74,7 +74,7 @@ class YuantaQuoteAXCtrl:
             os.makedirs(self.save_dir)
 
     def savedir(self, code):
-        if datetime.datetime.now() > self.next_day:
+        if get_time() > self.next_day:
             self.update_savedir()
 
         return os.path.join(self.save_dir, f'{code}.csv')
@@ -119,7 +119,7 @@ class YuantaQuoteAXCtrl:
         07:00~14:45 - Day
         14:45~07:00 - Night
         """
-        now = datetime.datetime.now()
+        now = get_time()
         day_begin = now.replace(hour=7, minute=0, second=0)
         day_end = now.replace(hour=14, minute=50, second=0)
 
@@ -131,11 +131,10 @@ class YuantaQuoteAXCtrl:
 
     def is_trade_time(self):
         """
-        # Trade Time
-        + Day: 08:45~13:45
-        + Night: 15:00~05:00
+        08:45~13:45 - Day
+        15:00~05:00 - Night
         """
-        now = datetime.datetime.now()
+        now = get_time()
         day_begin = now.replace(hour=8, minute=45, second=0)
         day_end = now.replace(hour=13, minute=45, second=0)
         night_begin = now.replace(hour=15, minute=00, second=0)
@@ -147,6 +146,7 @@ class YuantaQuoteAXCtrl:
             return True
         if now >= night_begin:
             return True
+
         return False
 
     def Config(self, host, port, username, password):
@@ -276,6 +276,14 @@ def RenewOptionCodeList():
     code_list = load_json('./code.json')
     code_list['option'] = option_code_list
     save_json('./code.json', code_list)
+
+def get_time():
+    """Get the absolute time of UTC+8."""
+    d = datetime.timedelta(hours=8)
+    t = datetime.datetime.utcnow()
+    t += d
+
+    return t
 
 def main():
     parser = argparse.ArgumentParser(
